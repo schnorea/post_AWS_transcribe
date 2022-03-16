@@ -1,7 +1,7 @@
 # post_AWS_transcribe
 AWS Transcribe does a reasonable job doing speach to text with speaker id but the json output is crazy.
 
-Recording meetings and other conversations via the computer is easy but when you go back to figure out who said what it is painful. AWS Transcribe allows you to take a mp3 file and convert it to text. AWS Transcribe also will offer to detect the speaks and will identify each word with a speaker_label.  The problem is that the JSON file they had back is a bit of a bear to try and decypher.  
+Recording meetings and other conversations via the computer is easy but when you go back to figure out who said what it is painful. AWS Transcribe allows you to take a mp3 file and convert it to text. AWS Transcribe also will offer to detect the speaks and will identify each word with a speaker_label.  The problem is that the JSON file they hand back is a bit of a bear to try and decypher.  
 
 This script takes a AWS Transcribe JSON output file and processes it into a number of useful formats.
 
