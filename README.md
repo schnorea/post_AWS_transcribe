@@ -168,4 +168,7 @@ The audio file that was used for the example was a bit extreme in that it had mu
 
 The script can consume this file as well (same syntax as above) and then be used to create the transcription and Audacity Label files.
 
+## Fixing Errors
+Using Audacity and the Debbug labels is very convienent to fix some errors as you can edit the labels and they can be exported as well. In the future the script will be extended to allow the edited and exported labels to be read back into the script to fix the content of the JSON files and other label files.
+
 Enjoy!
