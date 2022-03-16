@@ -154,4 +154,9 @@ Just copy over the process_trans.py file.  It's Python3.  No modules to install.
 $ python process_trans.py example_input/BillTedExcel.json BillTedOuput
 ```
  
+## Speaker Label Errors
+The audio file that was used for the example was a bit extreme in that it had music and cut scene dialog all over the place. The result is that the speaker labeling isn't that good.  Even in more controled environments if there are speakers that are talking over each other there will be label errors.  The Word JSON object allows these error to be corrected more easily.  In the future a more automated way of making corrrection to this JSON file will be added.
+
+The script can consume this file as well (same syntax as above) and then be used to create the transcription and Audacity Label files.
+
 Enjoy!
