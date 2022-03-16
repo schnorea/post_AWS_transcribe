@@ -109,6 +109,8 @@ Three label formats can be output.
 92.54	102.63	spk_1
 105.45	109.65	spk_0
 ```
+#### Results in Speaker Labels
+<img src="/assets/Labeled_Speaker.png?raw=true" alt="drawing" width="1000"/>
 
 ### Speaker Content
 ```
@@ -122,6 +124,8 @@ Three label formats can be output.
 33.73	47.62001	spk_1>>>time. How's it going? Royal ugly dudes, put them in the iron meet Excellent, execute them booties. What's going on?
 49.39	53.09	spk_0>>>And they're making a big impression. Historical
 ```
+#### Results in Content Labels
+<img src="/assets/Labeled_Content.png?raw=true" alt="drawing" width="1000"/>
 
 ### Debug
 ```
@@ -145,6 +149,11 @@ Three label formats can be output.
 10.65	11.2	spk_0 >17> years
 11.2	11.2001	spk_0 >18> .
 ```
+#### Results in Debug Labels (Not zoomed)
+<img src="/assets/Labeled_Debug_Full.png?raw=true" alt="drawing" width="1000"/>
+
+#### Results in Debug Labels (Zoomed)
+<img src="/assets/Labeled_Debug_Zoomed.png?raw=true" alt="drawing" width="1000"/>
 
 ## Install and run
 Just copy over the process_trans.py file.  It's Python3.  No modules to install.
