@@ -3,13 +3,12 @@ from sys import argv
 from pprint import pprint
 from copy import deepcopy 
 import datetime
+import re
 
 
 class Transcription(object):
     def __init__(self, filename):
         self.debug = False
-        self.original_loaded = False
-        self.processed_loaded = False
         self.transcription_object = None
         self.processed = None
 
@@ -29,13 +28,13 @@ class Transcription(object):
         # Figure out if this is an orginal transcription object or
         # a process speaker_label, content, type, start_time, end_time
         # object
-        if self.is_transcription_object(mystery_json):
+        if self._is_transcription_object(mystery_json):
             # process the thing
             pass
             self.transcription_object = mystery_json
             self._get_meta_info(mystery_json)
             self._weave_in_words()
-        elif self.is_processed_object(mystery_json):
+        elif self._is_processed_object(mystery_json):
             # don't process
             pass
             self.processed = mystery_json
@@ -58,7 +57,7 @@ class Transcription(object):
                 json.dump(result, ofh, indent=4, sort_keys=True)
 
 
-    def is_transcription_object(self, json_obj):
+    def _is_transcription_object(self, json_obj):
         # "jobName":"LineageSecondHalfofSecondDay","accountId":"832014947281","results":{}
         if 'jobName' in json_obj and \
         'accountId' in json_obj and \
@@ -68,7 +67,7 @@ class Transcription(object):
             return True
         return False
 
-    def is_processed_object(self, json_obj):
+    def _is_processed_object(self, json_obj):
         # "jobName":"LineageSecondHalfofSecondDay","accountId":"832014947281","processed_time":"167863178518", results":[]
         if 'jobName' in json_obj and \
         'accountId' in json_obj and \
@@ -79,7 +78,110 @@ class Transcription(object):
             return True
         return False
 
-    def has_speaker_ids(self):
+    def _parse_debug_line(self, line):
+        # Label files are of the format 
+        #          "start_time <tab> end_time <tab> label_string <newline>"
+        # Debug label_strings are of the format
+        #          "speaker_label + f" >{index}> " + content_string"
+        line_pattern = r'^\s*([0-9\.]+)\s([0-9\.]+)\s(.+)'
+        debug_str_pattern = r'([^>]+)>([0-9]+)>\s+(.+)'
+        line_match = re.search(line_pattern, line)
+        if line_match is not None:
+            start_time = line_match.group(1)
+            end_time = line_match.group(2)
+            debug_str = line_match.group(3)
+        else:
+            return -1, line
+        debug_match = re.search(debug_str_pattern, debug_str)
+        if debug_match is not None:
+            speaker_label = debug_match.group(1).strip()
+            content_index = int(debug_match.group(2))
+            content = debug_match.group(3).strip()
+            # Check if content_index makes sense
+            if content_index > len(self.processed['results']) or content_index < 0:
+                return -3, debug_str
+            return content_index, start_time, end_time, speaker_label, content
+        return -2, debug_str
+
+    def _look_match_modify(self, line_parts):
+        content_index, start_time, end_time, speaker_label, content = line_parts
+        word_obj = self.processed['results'][content_index]
+        w_start_time = word_obj['start_time']
+        w_end_time = word_obj['end_time']
+        w_speaker_label = word_obj['speaker_label']
+        w_content = word_obj['content']
+
+        # See if start and end times match (might want to add some margin here later)
+        start_match = float(w_start_time) == float(start_time)
+        end_match = float(w_end_time) == float(end_time)
+        if not start_match:
+            print(f"Start times don't match for index {content_index} word {w_start_time} label {start_time}")
+        if not end_match:
+            print(f"End times don't match for index {content_index} word {w_end_time} label {end_time}")
+
+        speaker_match = w_speaker_label == speaker_label
+        if not speaker_match:
+            print(f"Speaker_labels don't match for index {content_index} word {w_speaker_label} label {speaker_label}")
+
+        content_math = w_content == content
+        if not content_math:
+            print(f"Content doesn't match for index {content_index} word {w_content} label {content}")
+
+
+
+    def load_edited_debug_label_file(self, debug_label_filename):
+        # Check to see if it is a label file and that it matches the loaded processed
+        # object.
+        try:
+            with open(debug_label_filename, "r") as ifh:
+                lines = ifh.readlines()
+        except IOError:
+            print(f"ERROR: File {filename} is not accessible in 'load_edited_debug_label_file'")
+            exit(1)
+        all_line_parts = []
+        for line_number, line in enumerate(lines):
+            line_parts = self._parse_debug_line(line)
+            if len(line_parts) == 2 and line_parts[0] == -1:
+                # Bad line
+                print(f"ERROR: In file '{debug_label_filename}' the line format didn't match the format below at line {line_number + 1}")
+                print(f"Expected debug line format is 'start_time as float' 'tab character' 'end_time as float' 'tab character' 'debug_str'")
+                print(f"Example: '234.21\\t309.1\\tspr_1 >14> soap'")
+                print(f"What was found (pipes added to denote start and end of string) |{line_parts[1]}|")
+                print(f"Please correct and resubmit")
+                exit(1)
+            elif len(line_parts) == 2 and line_parts[0] == -2:
+                # Bad debug_str
+                print(f"ERROR: In file '{debug_label_filename}' the line format was fine but the debug_str format didn't match on line {line_number + 1}")
+                print(f"The debug_str should have this format 'speecher_label' '>' 'index_number as int' '>' 'content string'")
+                print(f"Example: 'Paul Johns >92> Towel'")
+                print(f"What was found (pipes added to denote start and end of string) |{line_parts[1]}|")
+                print(f"Please correct and resubmit")
+                exit(2)
+            elif len(line_parts) == 2 and line_parts[0] == -3:
+                # Bad content_index
+                print(f"ERROR: In file '{debug_label_filename}' the line format was fine but in the debug_str 'index_number' was out of range on line {line_number + 1}")
+                print(f"The debug_str should have this format 'speecher_label' '>' 'index_number as int' '>' 'content string'")
+                print(f"index_number should be greater than zero and less than or equal to the length of the transcription.")
+                print(f"You might want to check if the label file and the word JSON file are from the same transcription.")
+                print(f"What was found (pipes added to denote start and end of string) |{line_parts[1]}|")
+                print(f"Please correct and resubmit")
+                exit(3)
+            elif len(line_parts) == 5:
+                # Good line match or modify existing words
+                all_line_parts.append(line_parts)
+        # Check if all_line_parts length matches what is in self.processed
+        if len(all_line_parts) != len(self.processed['results']):
+            # Labels and words lengths don't match
+            print(f"ERROR: The label file '{debug_label_filename}'s number of lines don't match what is found in the JSON word file loaded or")
+            print(f"the JSON transcription file loaded length. Label length {len(all_line_parts)} Word length {len(self.processed['results'])}")
+            print(f"You might want to check if the label file and the word JSON file are from the same transcription.")
+            print(f"Please correct and resubmit")
+            exit(4)
+        else:
+            for line_parts in all_line_parts:
+                self._look_match_modify(line_parts)
+
+    def _has_speaker_ids(self):
         results = self.transcription_object['results']
         return ('speaker_labels' in results)
 
@@ -139,7 +241,7 @@ class Transcription(object):
         """ Takes the speaker id, items sections and weaves these together to form a transcription
         object. 
         """
-        if not self.has_speaker_ids():
+        if not self._has_speaker_ids():
             print("ERROR: This transcribe json file doesn't have speaker id labels."
                   "resubmitting to AWS Transcribe and enable speaker id")
             exit(1)
